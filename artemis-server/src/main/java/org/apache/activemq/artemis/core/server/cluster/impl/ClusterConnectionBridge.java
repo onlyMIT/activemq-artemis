@@ -235,6 +235,8 @@ public class ClusterConnectionBridge extends BridgeImpl {
                                                    " IN ('" +
                                                    CoreNotificationType.BINDING_ADDED +
                                                    "','" +
+                                                   CoreNotificationType.CONNECTION_CONNECTED +
+                                                   "','" +
                                                    CoreNotificationType.BINDING_REMOVED +
                                                    "','" +
                                                    CoreNotificationType.CONSUMER_CREATED +
@@ -252,7 +254,10 @@ public class ClusterConnectionBridge extends BridgeImpl {
                                                    flowRecord.getMaxHops() +
                                                    " AND (" +
                                                    createSelectorFromAddress(appendIgnoresToFilter(flowRecord.getAddress())) +
-                                                   ")");
+                                                   ") AND (" +
+                                                   createNotificationAddressFilter() +
+                                                   ")"
+                 );
 
          sessionConsumer.createTemporaryQueue(managementNotificationAddress, notifQueueName, filter);
 
@@ -351,8 +356,14 @@ public class ClusterConnectionBridge extends BridgeImpl {
       }
       filterString += "!" + storeAndForwardPrefix;
       filterString += ",!" + managementAddress;
-      filterString += ",!" + managementNotificationAddress;
       return filterString;
+   }
+
+   private String createNotificationAddressFilter() {
+      StringBuilder filterBuilder = new StringBuilder(ManagementHelper.HDR_NOTIFICATION_TYPE).append(" = '")
+              .append(CoreNotificationType.CONNECTION_CONNECTED).append("' OR (").append(ManagementHelper.HDR_ADDRESS)
+              .append(" NOT LIKE '").append(managementNotificationAddress).append("%')");
+      return filterBuilder.toString();
    }
 
 

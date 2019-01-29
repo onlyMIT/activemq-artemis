@@ -27,6 +27,7 @@ import org.apache.activemq.artemis.api.core.ActiveMQException;
 import org.apache.activemq.artemis.api.core.SimpleString;
 import org.apache.activemq.artemis.core.remoting.CloseListener;
 import org.apache.activemq.artemis.core.remoting.FailureListener;
+import org.apache.activemq.artemis.core.remoting.server.RemotingService;
 import org.apache.activemq.artemis.spi.core.protocol.RemotingConnection;
 import org.apache.activemq.artemis.spi.core.remoting.Connection;
 import org.apache.activemq.artemis.spi.core.remoting.ReadyListener;
@@ -36,6 +37,8 @@ import javax.security.auth.Subject;
 public class MQTTConnection implements RemotingConnection {
 
    private final Connection transportConnection;
+
+   private final RemotingService remotingService;
 
    private final long creationTime;
 
@@ -51,8 +54,9 @@ public class MQTTConnection implements RemotingConnection {
 
    private final List<CloseListener> closeListeners = new CopyOnWriteArrayList<>();
 
-   public MQTTConnection(Connection transportConnection) throws Exception {
+   public MQTTConnection(Connection transportConnection, RemotingService remotingService) throws Exception {
       this.transportConnection = transportConnection;
+      this.remotingService = remotingService;
       this.creationTime = System.currentTimeMillis();
       this.dataReceived = new AtomicBoolean();
       this.destroyed = false;
@@ -216,8 +220,10 @@ public class MQTTConnection implements RemotingConnection {
    public void bufferReceived(Object connectionID, ActiveMQBuffer buffer) {
    }
 
-   public void setConnected(boolean connected) {
-      this.connected = connected;
+   @Override
+   public void connected() throws Exception {
+      remotingService.sendConnectedNotification(this);
+      this.connected = true;
    }
 
    public boolean getConnected() {

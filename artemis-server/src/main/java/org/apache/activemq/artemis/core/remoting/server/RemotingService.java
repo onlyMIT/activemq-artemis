@@ -109,4 +109,6 @@ public interface RemotingService {
    Acceptor createAcceptor(TransportConfiguration transportConfiguration);
 
    void destroyAcceptor(String name) throws Exception;
+
+   void sendConnectedNotification(RemotingConnection connection) throws Exception;
 }
