@@ -18,6 +18,7 @@ package org.apache.activemq.artemis.core.protocol.mqtt;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -30,8 +31,15 @@ import io.netty.handler.codec.mqtt.MqttEncoder;
 import io.netty.handler.codec.mqtt.MqttMessage;
 import org.apache.activemq.artemis.api.core.ActiveMQBuffer;
 import org.apache.activemq.artemis.api.core.BaseInterceptor;
+import org.apache.activemq.artemis.api.core.SimpleString;
+import org.apache.activemq.artemis.api.core.management.CoreNotificationType;
+import org.apache.activemq.artemis.api.core.management.ManagementHelper;
+import org.apache.activemq.artemis.core.postoffice.Binding;
 import org.apache.activemq.artemis.core.remoting.impl.netty.NettyServerConnection;
 import org.apache.activemq.artemis.core.server.ActiveMQServer;
+import org.apache.activemq.artemis.core.server.Consumer;
+import org.apache.activemq.artemis.core.server.Queue;
+import org.apache.activemq.artemis.core.server.impl.ServerConsumerImpl;
 import org.apache.activemq.artemis.core.server.management.Notification;
 import org.apache.activemq.artemis.core.server.management.NotificationListener;
 import org.apache.activemq.artemis.spi.core.protocol.AbstractProtocolManager;
@@ -40,6 +48,9 @@ import org.apache.activemq.artemis.spi.core.protocol.ProtocolManagerFactory;
 import org.apache.activemq.artemis.spi.core.protocol.RemotingConnection;
 import org.apache.activemq.artemis.spi.core.remoting.Acceptor;
 import org.apache.activemq.artemis.spi.core.remoting.Connection;
+import org.apache.activemq.artemis.utils.collections.TypedProperties;
+
+import static org.apache.activemq.artemis.api.core.management.CoreNotificationType.CONSUMER_CREATED;
 
 /**
  * MQTTProtocolManager
@@ -62,11 +73,44 @@ class MQTTProtocolManager extends AbstractProtocolManager<MqttMessage, MQTTInter
                        List<BaseInterceptor> outgoingInterceptors) {
       this.server = server;
       this.updateInterceptors(incomingInterceptors, outgoingInterceptors);
+      server.getManagementService().addNotificationListener(this);
    }
 
    @Override
    public void onNotification(Notification notification) {
-      // TODO handle notifications
+      if (!(notification.getType() instanceof CoreNotificationType))
+         return;
+
+      CoreNotificationType type = (CoreNotificationType) notification.getType();
+      if (type != CONSUMER_CREATED)
+         return;
+
+      TypedProperties props = notification.getProperties();
+
+      SimpleString protocolName = props.getSimpleStringProperty(ManagementHelper.HDR_PROTOCOL_NAME);
+
+      if (protocolName == null || !protocolName.toString().equals(MQTTProtocolManagerFactory.MQTT_PROTOCOL_NAME))
+         return;
+
+      int distance = props.getIntProperty(ManagementHelper.HDR_DISTANCE);
+
+      if (distance > 0) {
+         SimpleString queueName = props.getSimpleStringProperty(ManagementHelper.HDR_ROUTING_NAME);
+
+         Binding binding = server.getPostOffice().getBinding(queueName);
+         if (binding != null) {
+            Queue queue = (Queue) binding.getBindable();
+            String clientId = props.getSimpleStringProperty(ManagementHelper.HDR_CLIENT_ID).toString();
+            //If the client ID represents a client already connected to the server then the server MUST disconnect the existing client.
+            //Avoid consumers with the same client ID in the cluster appearing at different nodes at the same time
+            Collection<Consumer> consumersSet = queue.getConsumers();
+            for (Consumer consumer : consumersSet) {
+               ServerConsumerImpl serverConsumer = (ServerConsumerImpl) consumer;
+               if (clientId.equals(serverConsumer.getConnectionClientID()))
+                  serverConsumer.getRemotingConnection().destroy();
+            }
+         }
+      }
    }
 
    @Override

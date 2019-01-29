@@ -62,6 +62,7 @@ import org.apache.activemq.artemis.core.server.management.ManagementService;
 import org.apache.activemq.artemis.core.server.management.Notification;
 import org.apache.activemq.artemis.core.transaction.Transaction;
 import org.apache.activemq.artemis.core.transaction.impl.TransactionImpl;
+import org.apache.activemq.artemis.spi.core.protocol.RemotingConnection;
 import org.apache.activemq.artemis.spi.core.protocol.SessionCallback;
 import org.apache.activemq.artemis.spi.core.remoting.ReadyListener;
 import org.apache.activemq.artemis.utils.FutureLatch;
@@ -1543,5 +1544,9 @@ public class ServerConsumerImpl implements ServerConsumer, ReadyListener {
    @Override
    public String getConnectionRemoteAddress() {
       return this.session.getRemotingConnection().getTransportConnection().getRemoteAddress();
+   }
+
+   public RemotingConnection getRemotingConnection() {
+      return this.session.getRemotingConnection();
    }
 }

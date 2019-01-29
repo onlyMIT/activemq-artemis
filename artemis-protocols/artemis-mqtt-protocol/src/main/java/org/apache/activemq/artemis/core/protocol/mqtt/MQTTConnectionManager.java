@@ -163,10 +163,10 @@ public class MQTTConnectionManager {
 
    private MQTTSessionState getSessionState(String clientId) {
       /* [MQTT-3.1.2-4] Attach an existing session if one exists otherwise create a new one. */
-      MQTTSessionState state = MQTTSession.SESSIONS.get(clientId);
+      MQTTSessionState state = session.getSessionStateFromSessionMap(clientId);
       if (state == null) {
          state = new MQTTSessionState(clientId);
-         MQTTSession.SESSIONS.put(clientId, state);
+         session.putSessionStateIntoSessionMap(clientId, state);
       }
 
       return state;

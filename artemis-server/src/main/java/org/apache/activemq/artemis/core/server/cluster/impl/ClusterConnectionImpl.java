@@ -1336,6 +1336,14 @@ public final class ClusterConnectionImpl implements ClusterConnection, AfterConn
          // Need to propagate the consumer add
          TypedProperties props = new TypedProperties();
 
+         SimpleString protocolName = message.getSimpleStringProperty(ManagementHelper.HDR_PROTOCOL_NAME);
+         if (protocolName != null)
+            props.putSimpleStringProperty(ManagementHelper.HDR_PROTOCOL_NAME, protocolName);
+
+         SimpleString clientId = message.getSimpleStringProperty(ManagementHelper.HDR_CLIENT_ID);
+         if (clientId != null)
+            props.putSimpleStringProperty(ManagementHelper.HDR_CLIENT_ID, clientId);
+
          props.putSimpleStringProperty(ManagementHelper.HDR_ADDRESS, binding.getAddress());
 
          props.putSimpleStringProperty(ManagementHelper.HDR_CLUSTER_NAME, clusterName);
