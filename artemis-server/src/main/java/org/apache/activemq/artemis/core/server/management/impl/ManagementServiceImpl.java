@@ -634,6 +634,20 @@ public class ManagementServiceImpl implements ManagementService {
    }
 
    @Override
+   public void callNotificationListener(Notification notification) {
+      synchronized (postOffice.getNotificationLock()) {
+         for (NotificationListener listener : listeners) {
+            try {
+               listener.onNotification(notification);
+            } catch (Exception e) {
+               // Exception thrown from one listener should not stop execution of others
+               ActiveMQServerLogger.LOGGER.errorCallingNotifListener(e);
+            }
+         }
+      }
+   }
+
+   @Override
    public void sendNotification(final Notification notification) throws Exception {
       if (logger.isTraceEnabled()) {
          logger.trace("Sending Notification = " + notification +

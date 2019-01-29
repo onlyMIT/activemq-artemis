@@ -30,6 +30,9 @@ import io.netty.handler.codec.mqtt.MqttEncoder;
 import io.netty.handler.codec.mqtt.MqttMessage;
 import org.apache.activemq.artemis.api.core.ActiveMQBuffer;
 import org.apache.activemq.artemis.api.core.BaseInterceptor;
+import org.apache.activemq.artemis.api.core.SimpleString;
+import org.apache.activemq.artemis.api.core.management.CoreNotificationType;
+import org.apache.activemq.artemis.api.core.management.ManagementHelper;
 import org.apache.activemq.artemis.core.remoting.impl.netty.NettyServerConnection;
 import org.apache.activemq.artemis.core.server.ActiveMQServer;
 import org.apache.activemq.artemis.core.server.management.Notification;
@@ -40,6 +43,9 @@ import org.apache.activemq.artemis.spi.core.protocol.ProtocolManagerFactory;
 import org.apache.activemq.artemis.spi.core.protocol.RemotingConnection;
 import org.apache.activemq.artemis.spi.core.remoting.Acceptor;
 import org.apache.activemq.artemis.spi.core.remoting.Connection;
+import org.apache.activemq.artemis.utils.collections.TypedProperties;
+
+import static org.apache.activemq.artemis.api.core.management.CoreNotificationType.CONNECTION_CONNECTED;
 
 /**
  * MQTTProtocolManager
@@ -62,11 +68,29 @@ class MQTTProtocolManager extends AbstractProtocolManager<MqttMessage, MQTTInter
                        List<BaseInterceptor> outgoingInterceptors) {
       this.server = server;
       this.updateInterceptors(incomingInterceptors, outgoingInterceptors);
+      server.getManagementService().addNotificationListener(this);
    }
 
    @Override
    public void onNotification(Notification notification) {
-      // TODO handle notifications
+      if (!(notification.getType() instanceof CoreNotificationType))
+         return;
+
+      CoreNotificationType type = (CoreNotificationType) notification.getType();
+      if (type != CONNECTION_CONNECTED)
+         return;
+
+      TypedProperties props = notification.getProperties();
+
+      SimpleString protocolName = props.getSimpleStringProperty(ManagementHelper.HDR_PROTOCOL_NAME);
+
+      if (protocolName == null || !protocolName.toString().equals(MQTTProtocolManagerFactory.MQTT_PROTOCOL_NAME))
+         return;
+
+      String clientId = props.getSimpleStringProperty(ManagementHelper.HDR_CLIENT_ID).toString();
+      //If the client ID represents a client already connected to the server then the server MUST disconnect the existing client.
+      //Avoid consumers with the same client ID in the cluster appearing at different nodes at the same time
+      connectedClients.get(clientId).destroy();
    }
 
    @Override
@@ -86,7 +110,7 @@ class MQTTProtocolManager extends AbstractProtocolManager<MqttMessage, MQTTInter
    @Override
    public ConnectionEntry createConnectionEntry(Acceptor acceptorUsed, Connection connection) {
       try {
-         MQTTConnection mqttConnection = new MQTTConnection(connection);
+         MQTTConnection mqttConnection = new MQTTConnection(connection, server.getRemotingService());
          ConnectionEntry entry = new ConnectionEntry(mqttConnection, null, System.currentTimeMillis(), MQTTUtil.DEFAULT_KEEP_ALIVE_FREQUENCY);
 
          NettyServerConnection nettyConnection = ((NettyServerConnection) connection);

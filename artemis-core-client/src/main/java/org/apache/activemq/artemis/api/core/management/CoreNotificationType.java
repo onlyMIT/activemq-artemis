@@ -47,7 +47,8 @@ public enum CoreNotificationType implements NotificationType {
    SESSION_CREATED(26),
    SESSION_CLOSED(27),
    MESSAGE_DELIVERED(28),
-   MESSAGE_EXPIRED(29);
+   MESSAGE_EXPIRED(29),
+   CONNECTION_CONNECTED(30);
 
    private final int value;
 

@@ -37,4 +37,8 @@ public interface NotificationService {
 
    void removeNotificationListener(NotificationListener listener);
 
+   default void callNotificationListener(Notification notification) {
+
+   }
+
 }

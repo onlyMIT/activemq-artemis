@@ -99,7 +99,7 @@ public class MQTTConnectionManager {
          this.willTopic = willTopic;
       }
 
-      session.getConnection().setConnected(true);
+      session.getConnection().connected();
       session.start();
       session.getProtocolHandler().sendConnack(MqttConnectReturnCode.CONNECTION_ACCEPTED);
    }
@@ -163,13 +163,7 @@ public class MQTTConnectionManager {
 
    private MQTTSessionState getSessionState(String clientId) {
       /* [MQTT-3.1.2-4] Attach an existing session if one exists otherwise create a new one. */
-      MQTTSessionState state = MQTTSession.SESSIONS.get(clientId);
-      if (state == null) {
-         state = new MQTTSessionState(clientId);
-         MQTTSession.SESSIONS.put(clientId, state);
-      }
-
-      return state;
+      return MQTTSession.getSessionState(clientId, session.getServer().getIdentity());
    }
 
    private String validateClientId(String clientId, boolean cleanSession) {
