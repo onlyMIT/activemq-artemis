@@ -18,9 +18,9 @@ package org.apache.activemq.artemis.core.protocol.mqtt;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -50,7 +50,7 @@ import static org.apache.activemq.artemis.api.core.management.CoreNotificationTy
 /**
  * MQTTProtocolManager
  */
-class MQTTProtocolManager extends AbstractProtocolManager<MqttMessage, MQTTInterceptor, MQTTConnection> implements NotificationListener {
+public class MQTTProtocolManager extends AbstractProtocolManager<MqttMessage, MQTTInterceptor, MQTTConnection> implements NotificationListener {
 
    private static final List<String> websocketRegistryNames = Arrays.asList("mqtt", "mqttv3.1");
 
@@ -61,12 +61,17 @@ class MQTTProtocolManager extends AbstractProtocolManager<MqttMessage, MQTTInter
    private final List<MQTTInterceptor> outgoingInterceptors = new ArrayList<>();
 
    //TODO Read in a list of existing client IDs from stored Sessions.
-   private Map<String, MQTTConnection> connectedClients = new ConcurrentHashMap<>();
+   private final Map<String, MQTTConnection> connectedClients;
+   private final Map<String, MQTTSessionState> sessionStates;
 
    MQTTProtocolManager(ActiveMQServer server,
+                       Map<String, MQTTConnection> connectedClients,
+                       Map<String, MQTTSessionState> sessionStates,
                        List<BaseInterceptor> incomingInterceptors,
                        List<BaseInterceptor> outgoingInterceptors) {
       this.server = server;
+      this.connectedClients = connectedClients;
+      this.sessionStates = sessionStates;
       this.updateInterceptors(incomingInterceptors, outgoingInterceptors);
       server.getManagementService().addNotificationListener(this);
    }
@@ -218,5 +223,18 @@ class MQTTProtocolManager extends AbstractProtocolManager<MqttMessage, MQTTInter
     */
    public MQTTConnection addConnectedClient(String clientId, MQTTConnection connection) {
       return connectedClients.put(clientId, connection);
+   }
+
+   public MQTTSessionState getSessionState(String clientId) {
+      /* [MQTT-3.1.2-4] Attach an existing session if one exists otherwise create a new one. */
+      return sessionStates.computeIfAbsent(clientId, MQTTSessionState::new);
+   }
+
+   public MQTTSessionState removeSessionState(String clientId) {
+      return sessionStates.remove(clientId);
+   }
+
+   public Map<String, MQTTSessionState> getSessionStates() {
+      return new HashMap<>(sessionStates);
    }
 }
