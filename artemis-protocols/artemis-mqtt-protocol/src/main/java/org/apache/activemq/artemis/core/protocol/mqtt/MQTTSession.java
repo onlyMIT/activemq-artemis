@@ -17,10 +17,7 @@
 
 package org.apache.activemq.artemis.core.protocol.mqtt;
 
-import java.util.HashMap;
-import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.activemq.artemis.core.config.WildcardConfiguration;
 import org.apache.activemq.artemis.core.message.impl.CoreMessageObjectPools;
@@ -29,8 +26,6 @@ import org.apache.activemq.artemis.core.server.impl.ServerSessionImpl;
 import org.apache.activemq.artemis.spi.core.protocol.SessionCallback;
 
 public class MQTTSession {
-
-   private static Map<String, MQTTSessionState> SESSIONS = new ConcurrentHashMap<>();
 
    private final String id = UUID.randomUUID().toString();
 
@@ -108,7 +103,7 @@ public class MQTTSession {
 
          if (isClean()) {
             clean();
-            MQTTSession.removeSessionState(connection.getClientID(), getServer().getIdentity());
+            protocolManager.removeSessionState(connection.getClientID());
          }
       }
       stopped = true;
@@ -199,36 +194,5 @@ public class MQTTSession {
 
    public CoreMessageObjectPools getCoreMessageObjectPools() {
       return coreMessageObjectPools;
-   }
-
-   public static Map<String, MQTTSessionState> getSessions() {
-      return new HashMap<>(SESSIONS);
-   }
-
-   public static MQTTSessionState getSessionState(String clientId, String identity) {
-      return SESSIONS.computeIfAbsent(generateSessionStateKey(clientId, identity), MQTTSessionState::new);
-   }
-
-   public static void removeSessionState(String clientId, String identity) {
-      SESSIONS.remove(generateSessionStateKey(clientId, identity));
-   }
-
-   /**
-    * When performing cluster testing, different nodes of the cluster are actually started in the same JVM process,
-    * and their class data is shared. {@link #SESSIONS} is shared, cause the test abnormal when multiple consumers
-    * use the same clientId to connect to different nodes simultaneously abnormal.
-    * if {@link ActiveMQServer#getIdentity()} is not null, indicates that the test is in progress.
-    * {@link ActiveMQServer#getIdentity()} is unique among different nodes. Use "identity+clientId" as the key to
-    * call {@link #SESSIONS} during testing, to ensure the correctness of test cases.
-    *
-    * @param clientId
-    * @return
-    */
-   private static String generateSessionStateKey(String clientId, String identity) {
-      String key = clientId;
-      if (identity != null) {
-         key = identity + key;
-      }
-      return key;
    }
 }
