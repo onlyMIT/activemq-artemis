@@ -30,7 +30,6 @@ import org.apache.activemq.artemis.spi.core.protocol.SessionCallback;
 
 public class MQTTSession {
 
-   private static Map<String, MQTTSessionState> SESSIONS = new ConcurrentHashMap<>();
 
    private final String id = UUID.randomUUID().toString();
 
@@ -112,7 +111,7 @@ public class MQTTSession {
 
          if (isClean()) {
             clean();
-            removeSessionStateFromSessionMap(connection.getClientID());
+            protocolManager.removeSessionState(connection.getClientID());
          }
       }
       stopped = true;
@@ -205,38 +204,4 @@ public class MQTTSession {
       return coreMessageObjectPools;
    }
 
-   public static Map<String, MQTTSessionState> getSessions() {
-      return new HashMap<>(SESSIONS);
-   }
-
-   public MQTTSessionState getSessionStateFromSessionMap(String clientId) {
-      return SESSIONS.get(generateSessionStateKey(clientId));
-   }
-
-   public void putSessionStateIntoSessionMap(String clientId, MQTTSessionState state) {
-      SESSIONS.put(generateSessionStateKey(clientId), state);
-   }
-
-   public void removeSessionStateFromSessionMap(String clientId) {
-      SESSIONS.remove(generateSessionStateKey(clientId));
-   }
-
-   /**
-    * When performing cluster testing, different nodes of the cluster are actually started in the same JVM process,
-    * and their class data is shared. {@link #SESSIONS} is shared, cause the test abnormal when multiple consumers
-    * use the same clientId to connect to different nodes simultaneously abnormal.
-    * if {@link ActiveMQServer#getIdentity()} is not null, indicates that the test is in progress.
-    * {@link ActiveMQServer#getIdentity()} is unique among different nodes. Use "identity+clientId" as the key to
-    * call {@link #SESSIONS} during testing, to ensure the correctness of test cases.
-    *
-    * @param clientId
-    * @return
-    */
-   private String generateSessionStateKey(String clientId) {
-      String key = clientId;
-      if (identity != null) {
-         key = identity + key;
-      }
-      return key;
-   }
 }

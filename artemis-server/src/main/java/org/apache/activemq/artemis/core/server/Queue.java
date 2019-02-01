@@ -19,8 +19,10 @@ package org.apache.activemq.artemis.core.server;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.Executor;
 
+import java.util.function.Predicate;
 import org.apache.activemq.artemis.api.core.ActiveMQException;
 import org.apache.activemq.artemis.api.core.Message;
 import org.apache.activemq.artemis.api.core.RoutingType;
@@ -286,6 +288,8 @@ public interface Queue extends Bindable,CriticalComponent {
    boolean hasMatchingConsumer(Message message);
 
    Collection<Consumer> getConsumers();
+
+   Set<Consumer> getConsumers(Predicate<Consumer> predicate);
 
    Map<SimpleString, Consumer> getGroups();
 

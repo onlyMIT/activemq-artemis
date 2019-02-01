@@ -19,6 +19,7 @@ package org.apache.activemq.artemis.core.protocol.mqtt;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -36,8 +37,7 @@ import org.apache.activemq.artemis.api.core.management.CoreNotificationType;
 import org.apache.activemq.artemis.api.core.management.ManagementHelper;
 import org.apache.activemq.artemis.core.postoffice.Binding;
 import org.apache.activemq.artemis.core.remoting.impl.netty.NettyServerConnection;
-import org.apache.activemq.artemis.core.server.ActiveMQServer;
-import org.apache.activemq.artemis.core.server.Consumer;
+import org.apache.activemq.artemis.core.server.*;
 import org.apache.activemq.artemis.core.server.Queue;
 import org.apache.activemq.artemis.core.server.impl.ServerConsumerImpl;
 import org.apache.activemq.artemis.core.server.management.Notification;
@@ -55,7 +55,7 @@ import static org.apache.activemq.artemis.api.core.management.CoreNotificationTy
 /**
  * MQTTProtocolManager
  */
-class MQTTProtocolManager extends AbstractProtocolManager<MqttMessage, MQTTInterceptor, MQTTConnection> implements NotificationListener {
+public class MQTTProtocolManager extends AbstractProtocolManager<MqttMessage, MQTTInterceptor, MQTTConnection> implements NotificationListener {
 
    private static final List<String> websocketRegistryNames = Arrays.asList("mqtt", "mqttv3.1");
 
@@ -66,7 +66,8 @@ class MQTTProtocolManager extends AbstractProtocolManager<MqttMessage, MQTTInter
    private final List<MQTTInterceptor> outgoingInterceptors = new ArrayList<>();
 
    //TODO Read in a list of existing client IDs from stored Sessions.
-   private Map<String, MQTTConnection> connectedClients = new ConcurrentHashMap<>();
+   private final Map<String, MQTTConnection> connectedClients = new ConcurrentHashMap<>();
+   private final Map<String, MQTTSessionState> sessionStates = new ConcurrentHashMap<>();
 
    MQTTProtocolManager(ActiveMQServer server,
                        List<BaseInterceptor> incomingInterceptors,
@@ -103,11 +104,13 @@ class MQTTProtocolManager extends AbstractProtocolManager<MqttMessage, MQTTInter
             String clientId = props.getSimpleStringProperty(ManagementHelper.HDR_CLIENT_ID).toString();
             //If the client ID represents a client already connected to the server then the server MUST disconnect the existing client.
             //Avoid consumers with the same client ID in the cluster appearing at different nodes at the same time
-            Collection<Consumer> consumersSet = queue.getConsumers();
+            Collection<Consumer> consumersSet = queue.getConsumers((c) -> (c instanceof ServerConsumer) && clientId.equals(((ServerConsumer) c).getConnectionClientID()));
             for (Consumer consumer : consumersSet) {
-               ServerConsumerImpl serverConsumer = (ServerConsumerImpl) consumer;
-               if (clientId.equals(serverConsumer.getConnectionClientID()))
-                  serverConsumer.getRemotingConnection().destroy();
+               try {
+                  ((ServerConsumer) consumer).close(false);
+               } catch (Exception e) {
+                  log.error(e);
+               }
             }
          }
       }
@@ -238,5 +241,18 @@ class MQTTProtocolManager extends AbstractProtocolManager<MqttMessage, MQTTInter
     */
    public MQTTConnection addConnectedClient(String clientId, MQTTConnection connection) {
       return connectedClients.put(clientId, connection);
+   }
+
+   public MQTTSessionState getSessionState(String clientId) {
+      /* [MQTT-3.1.2-4] Attach an existing session if one exists otherwise create a new one. */
+      return sessionStates.computeIfAbsent(clientId, MQTTSessionState::new);
+   }
+
+   public MQTTSessionState removeSessionState(String clientId) {
+      return sessionStates.remove(clientId);
+   }
+
+   public Map<String, MQTTSessionState> getSessionStates() {
+      return new HashMap<>(sessionStates);
    }
 }

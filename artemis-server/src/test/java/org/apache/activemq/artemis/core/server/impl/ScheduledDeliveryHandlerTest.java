@@ -31,6 +31,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import io.netty.buffer.ByteBuf;
+import java.util.function.Predicate;
 import org.apache.activemq.artemis.api.core.ActiveMQBuffer;
 import org.apache.activemq.artemis.api.core.ActiveMQException;
 import org.apache.activemq.artemis.api.core.ActiveMQPropertyConversionException;
@@ -1298,6 +1299,11 @@ public class ScheduledDeliveryHandlerTest extends Assert {
 
       @Override
       public Collection<Consumer> getConsumers() {
+         return null;
+      }
+
+      @Override
+      public Set<Consumer> getConsumers(Predicate<Consumer> predicate) {
          return null;
       }
 

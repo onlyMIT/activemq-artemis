@@ -541,12 +541,14 @@ public class ServerSessionImpl implements ServerSession, FailureListener {
          }
 
          String protocolName = remotingConnection.getProtocolName();
-         if (protocolName != null)
+         if (protocolName != null) {
             props.putSimpleStringProperty(ManagementHelper.HDR_PROTOCOL_NAME, SimpleString.toSimpleString(protocolName));
+         }
 
          String clientId = remotingConnection.getClientID();
-         if (clientId != null)
+         if (clientId != null) {
             props.putSimpleStringProperty(ManagementHelper.HDR_CLIENT_ID, SimpleString.toSimpleString(clientId));
+         }
 
          Notification notification = new Notification(null, CoreNotificationType.CONSUMER_CREATED, props);
 

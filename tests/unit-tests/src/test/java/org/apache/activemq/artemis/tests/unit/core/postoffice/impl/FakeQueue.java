@@ -21,6 +21,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Executor;
 
+import java.util.function.Predicate;
 import org.apache.activemq.artemis.api.config.ActiveMQDefaultConfiguration;
 import org.apache.activemq.artemis.api.core.Message;
 import org.apache.activemq.artemis.api.core.RoutingType;
@@ -425,6 +426,12 @@ public class FakeQueue extends CriticalComponentImpl implements Queue {
 
    @Override
    public Set<Consumer> getConsumers() {
+      // no-op
+      return null;
+   }
+
+   @Override
+   public Set<Consumer> getConsumers(Predicate<Consumer> predicate) {
       // no-op
       return null;
    }
