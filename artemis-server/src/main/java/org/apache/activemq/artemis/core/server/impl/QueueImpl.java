@@ -42,6 +42,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicLongFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
+import java.util.function.Predicate;
 import org.apache.activemq.artemis.api.config.ActiveMQDefaultConfiguration;
 import org.apache.activemq.artemis.api.core.ActiveMQException;
 import org.apache.activemq.artemis.api.core.ActiveMQNullRefException;
@@ -1203,6 +1204,18 @@ public class QueueImpl extends CriticalComponentImpl implements Queue {
       }
       return consumersSet;
    }
+
+   @Override
+   public Set<Consumer> getConsumers(Predicate<Consumer> predicate) {
+      Set<Consumer> consumersSet = new HashSet<>();
+      for (ConsumerHolder<? extends Consumer> consumerHolder : consumers) {
+         if (predicate.test(consumerHolder.consumer)) {
+            consumersSet.add(consumerHolder.consumer);
+         }
+      }
+      return consumersSet;
+   }
+
 
    @Override
    public synchronized Map<SimpleString, Consumer> getGroups() {
