@@ -272,6 +272,7 @@ public class ServerSessionImpl implements ServerSession, FailureListener {
       if (!xa) {
          tx = newTransaction();
       }
+      sendSessionNotification(CoreNotificationType.SESSION_CREATED);
    }
 
    // ServerSession implementation ---------------------------------------------------------------------------
@@ -422,9 +423,30 @@ public class ServerSessionImpl implements ServerSession, FailureListener {
          }
 
          closed = true;
+         sendSessionNotification(CoreNotificationType.SESSION_CLOSED);
 
          if (server.hasBrokerSessionPlugins()) {
             server.callBrokerSessionPlugins(plugin -> plugin.afterCloseSession(this, failed));
+         }
+      }
+   }
+
+   private void sendSessionNotification(final CoreNotificationType type) {
+      final ManagementService managementService = server.getManagementService();
+
+      if (managementService != null) {
+         try {
+            final TypedProperties props = new TypedProperties();
+            props.putSimpleStringProperty(ManagementHelper.HDR_CONNECTION_NAME, SimpleString.toSimpleString(this.getConnectionID().toString()));
+            props.putSimpleStringProperty(ManagementHelper.HDR_USER, SimpleString.toSimpleString(this.getUsername()));
+            props.putSimpleStringProperty(ManagementHelper.HDR_SESSION_NAME, SimpleString.toSimpleString(this.getName()));
+
+            props.putSimpleStringProperty(ManagementHelper.HDR_PROTOCOL_NAME, SimpleString.toSimpleString(this.getRemotingConnection().getProtocolName()));
+            props.putSimpleStringProperty(ManagementHelper.HDR_CLIENT_ID, SimpleString.toSimpleString(this.getRemotingConnection().getClientID()));
+
+            managementService.sendNotification(new Notification(null, type, props));
+         } catch (Exception e) {
+            logger.warn("Error sending notification: " + type, e.getMessage(), e);
          }
       }
    }

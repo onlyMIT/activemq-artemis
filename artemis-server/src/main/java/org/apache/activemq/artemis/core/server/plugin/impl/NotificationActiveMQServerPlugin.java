@@ -97,16 +97,6 @@ public class NotificationActiveMQServerPlugin implements ActiveMQServerPlugin {
    }
 
    @Override
-   public void afterCreateSession(ServerSession session) throws ActiveMQException {
-      sendSessionNotification(session, CoreNotificationType.SESSION_CREATED);
-   }
-
-   @Override
-   public void afterCloseSession(ServerSession session, boolean failed) throws ActiveMQException {
-      sendSessionNotification(session, CoreNotificationType.SESSION_CLOSED);
-   }
-
-   @Override
    public void afterAddAddress(AddressInfo addressInfo, boolean reload) throws ActiveMQException {
       sendAddressNotification(addressInfo, CoreNotificationType.ADDRESS_ADDED);
    }
@@ -188,23 +178,6 @@ public class NotificationActiveMQServerPlugin implements ActiveMQServerPlugin {
             final TypedProperties props = new TypedProperties();
             props.putSimpleStringProperty(ManagementHelper.HDR_CONNECTION_NAME, SimpleString.toSimpleString(connection.getID().toString()));
             props.putSimpleStringProperty(ManagementHelper.HDR_REMOTE_ADDRESS, SimpleString.toSimpleString(connection.getRemoteAddress()));
-
-            managementService.sendNotification(new Notification(null, type, props));
-         } catch (Exception e) {
-            logger.warn("Error sending notification: " + type, e.getMessage(), e);
-         }
-      }
-   }
-
-   private void sendSessionNotification(final ServerSession session, final CoreNotificationType type) {
-      final ManagementService managementService = getManagementService();
-
-      if (managementService != null && sendSessionNotifications) {
-         try {
-            final TypedProperties props = new TypedProperties();
-            props.putSimpleStringProperty(ManagementHelper.HDR_CONNECTION_NAME, SimpleString.toSimpleString(session.getConnectionID().toString()));
-            props.putSimpleStringProperty(ManagementHelper.HDR_USER, SimpleString.toSimpleString(session.getUsername()));
-            props.putSimpleStringProperty(ManagementHelper.HDR_SESSION_NAME, SimpleString.toSimpleString(session.getName()));
 
             managementService.sendNotification(new Notification(null, type, props));
          } catch (Exception e) {

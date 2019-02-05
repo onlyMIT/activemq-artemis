@@ -1026,21 +1026,24 @@ public final class ClusterConnectionImpl implements ClusterConnection, AfterConn
                return;
             }
 
-            SimpleString type = message.getSimpleStringProperty(ManagementHelper.HDR_NOTIFICATION_TYPE);
-            CoreNotificationType ntype = CoreNotificationType.valueOf(type.toString());
-            if (!reset && ntype != CoreNotificationType.CONNECTION_CONNECTED) {
+
+            if (!reset) {
                logger.debug("Notification being ignored since first reset wasn't received yet: " + message);
                return;
             }
 
-            handleNotificationMessage(message, ntype);
+            handleNotificationMessage(message);
          } catch (Exception e) {
             ActiveMQServerLogger.LOGGER.errorHandlingMessage(e);
          }
       }
 
-      private void handleNotificationMessage(ClientMessage message, CoreNotificationType ntype) throws Exception {
+      private void handleNotificationMessage(ClientMessage message) throws Exception {
          // TODO - optimised this by just passing int in header - but filter needs to be extended to support IN with
+         // a list of integers
+         SimpleString type = message.getSimpleStringProperty(ManagementHelper.HDR_NOTIFICATION_TYPE);
+
+         CoreNotificationType ntype = CoreNotificationType.valueOf(type.toString());
 
          switch (ntype) {
             case BINDING_ADDED: {
@@ -1076,8 +1079,8 @@ public final class ClusterConnectionImpl implements ClusterConnection, AfterConn
                doUnProposalReceived(message);
                break;
             }
-            case CONNECTION_CONNECTED: {
-               doConnectionConnected(message);
+            case SESSION_CREATED: {
+               doSessionCreated(message);
                break;
             }
             default: {
@@ -1305,17 +1308,21 @@ public final class ClusterConnectionImpl implements ClusterConnection, AfterConn
          binding.disconnect();
       }
 
-      private synchronized void doConnectionConnected(final ClientMessage message) throws Exception {
+      private synchronized void doSessionCreated(final ClientMessage message) throws Exception {
          if (logger.isTraceEnabled()) {
-            logger.trace(ClusterConnectionImpl.this + " Connection connected " + message);
+            logger.trace(ClusterConnectionImpl.this + " Session created " + message);
          }
          TypedProperties props = new TypedProperties();
          props.putSimpleStringProperty(ManagementHelper.HDR_CONNECTION_NAME, message.getSimpleStringProperty(ManagementHelper.HDR_CONNECTION_NAME));
-         props.putSimpleStringProperty(ManagementHelper.HDR_REMOTE_ADDRESS, message.getSimpleStringProperty(ManagementHelper.HDR_REMOTE_ADDRESS));
+         props.putSimpleStringProperty(ManagementHelper.HDR_USER, message.getSimpleStringProperty(ManagementHelper.HDR_USER));
+         props.putSimpleStringProperty(ManagementHelper.HDR_SESSION_NAME, message.getSimpleStringProperty(ManagementHelper.HDR_SESSION_NAME));
+
          props.putSimpleStringProperty(ManagementHelper.HDR_CLIENT_ID, message.getSimpleStringProperty(ManagementHelper.HDR_CLIENT_ID));
          props.putSimpleStringProperty(ManagementHelper.HDR_PROTOCOL_NAME, message.getSimpleStringProperty(ManagementHelper.HDR_PROTOCOL_NAME));
-         props.putIntProperty(ManagementHelper.HDR_DISTANCE, message.getIntProperty(ManagementHelper.HDR_DISTANCE) + 1);
-         managementService.sendNotification(new Notification(null, CoreNotificationType.CONNECTION_CONNECTED, props));
+
+         Integer distance = message.getIntProperty(ManagementHelper.HDR_DISTANCE);
+         props.putIntProperty(ManagementHelper.HDR_DISTANCE, distance == null ? 1 : distance + 1);
+         managementService.sendNotification(new Notification(null, CoreNotificationType.SESSION_CREATED, props));
       }
 
       private synchronized void doConsumerCreated(final ClientMessage message) throws Exception {

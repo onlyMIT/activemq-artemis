@@ -110,5 +110,4 @@ public interface RemotingService {
 
    void destroyAcceptor(String name) throws Exception;
 
-   void sendConnectedNotification(RemotingConnection connection) throws Exception;
 }

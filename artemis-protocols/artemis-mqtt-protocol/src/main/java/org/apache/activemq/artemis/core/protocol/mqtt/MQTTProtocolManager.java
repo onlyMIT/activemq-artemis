@@ -32,6 +32,7 @@ import org.apache.activemq.artemis.api.core.ActiveMQBuffer;
 import org.apache.activemq.artemis.api.core.BaseInterceptor;
 import org.apache.activemq.artemis.api.core.SimpleString;
 import org.apache.activemq.artemis.api.core.management.CoreNotificationType;
+import static org.apache.activemq.artemis.api.core.management.CoreNotificationType.SESSION_CREATED;
 import org.apache.activemq.artemis.api.core.management.ManagementHelper;
 import org.apache.activemq.artemis.core.remoting.impl.netty.NettyServerConnection;
 import org.apache.activemq.artemis.core.server.ActiveMQServer;
@@ -45,7 +46,6 @@ import org.apache.activemq.artemis.spi.core.remoting.Acceptor;
 import org.apache.activemq.artemis.spi.core.remoting.Connection;
 import org.apache.activemq.artemis.utils.collections.TypedProperties;
 
-import static org.apache.activemq.artemis.api.core.management.CoreNotificationType.CONNECTION_CONNECTED;
 
 /**
  * MQTTProtocolManager
@@ -82,7 +82,7 @@ public class MQTTProtocolManager extends AbstractProtocolManager<MqttMessage, MQ
          return;
 
       CoreNotificationType type = (CoreNotificationType) notification.getType();
-      if (type != CONNECTION_CONNECTED)
+      if (type != SESSION_CREATED)
          return;
 
       TypedProperties props = notification.getProperties();
@@ -122,7 +122,7 @@ public class MQTTProtocolManager extends AbstractProtocolManager<MqttMessage, MQ
    @Override
    public ConnectionEntry createConnectionEntry(Acceptor acceptorUsed, Connection connection) {
       try {
-         MQTTConnection mqttConnection = new MQTTConnection(connection, server.getRemotingService());
+         MQTTConnection mqttConnection = new MQTTConnection(connection);
          ConnectionEntry entry = new ConnectionEntry(mqttConnection, null, System.currentTimeMillis(), MQTTUtil.DEFAULT_KEEP_ALIVE_FREQUENCY);
 
          NettyServerConnection nettyConnection = ((NettyServerConnection) connection);
