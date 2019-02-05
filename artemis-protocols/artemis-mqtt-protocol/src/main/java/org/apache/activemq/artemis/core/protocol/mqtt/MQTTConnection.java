@@ -38,8 +38,6 @@ public class MQTTConnection implements RemotingConnection {
 
    private final Connection transportConnection;
 
-   private final RemotingService remotingService;
-
    private final long creationTime;
 
    private AtomicBoolean dataReceived;
@@ -54,9 +52,8 @@ public class MQTTConnection implements RemotingConnection {
 
    private final List<CloseListener> closeListeners = new CopyOnWriteArrayList<>();
 
-   public MQTTConnection(Connection transportConnection, RemotingService remotingService) throws Exception {
+   public MQTTConnection(Connection transportConnection) throws Exception {
       this.transportConnection = transportConnection;
-      this.remotingService = remotingService;
       this.creationTime = System.currentTimeMillis();
       this.dataReceived = new AtomicBoolean();
       this.destroyed = false;
@@ -220,9 +217,7 @@ public class MQTTConnection implements RemotingConnection {
    public void bufferReceived(Object connectionID, ActiveMQBuffer buffer) {
    }
 
-   @Override
    public void connected() throws Exception {
-      remotingService.sendConnectedNotification(this);
       this.connected = true;
    }
 

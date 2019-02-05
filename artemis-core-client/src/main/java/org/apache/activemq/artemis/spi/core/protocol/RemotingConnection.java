@@ -245,13 +245,6 @@ public interface RemotingConnection extends BufferHandler {
     */
    String getTransportLocalAddress();
 
-   /**
-    * Called when all connection related operations are completed.
-    */
-   default void connected() throws Exception {
-
-   }
-
    default boolean isSameTarget(TransportConfiguration... configs) {
       return getTransportConnection().isSameTarget(configs);
    }
